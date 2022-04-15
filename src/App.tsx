@@ -1,29 +1,75 @@
 import './App.css';
 
-import React from 'react';
-import { initializeApp } from "firebase/app";
+import React, { useState } from 'react';
+import { signInWithGoogle, signOutFirebase } from './Firebase';
 
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import DeviceList from './DeviceList';
+import { authTuyaApi } from './TuyaApi';
 
 const App: React.FC = () => {
+  const [user, setUser] = useState<string | null>(null);
+  const [autenticationBtn, setAuthenticationBtn] = useState<string>("Login");
+  const [tuyaDevices, setTuyaDevices] = useState<any>(null);
 
-  // Your web app's Firebase configuration
-  // const firebaseConfig = {
-  //   apiKey: "AIzaSyAFCwlk9IPhBaa-iA36NM_nkgDS7T8sD44",
-  //   authDomain: "dawood-dashboard.firebaseapp.com",
-  //   projectId: "dawood-dashboard",
-  //   storageBucket: "dawood-dashboard.appspot.com",
-  //   messagingSenderId: "680565836471",
-  //   appId: "1:680565836471:web:29d5ecb44e986bb2495b32"
-  // };
+  const handleAuthenticateBtn = async () => {
+    if (user === null) {
+      const authenticated = await signInWithGoogle();
+      if (authenticated) {
+        setUser(authenticated.displayName);
+        setAuthenticationBtn("Logout");
+      }
+    } else {
+      await signOutFirebase();
+      setUser(null);
+      setAuthenticationBtn("Login");
+    }
+  };
 
-  // Initialize Firebase
-  // const app = initializeApp(firebaseConfig);
+  const handleTuyaBtn = async () => {
+    const tuyaData = await authTuyaApi();
+    if (tuyaData.payload.devices !== null) {
+      setTuyaDevices(tuyaData.payload.devices);
+    }
+  };
 
   return (
     <div className="App">
-      TEST2333
+      TEST2333 - {user}
+      <button onClick={handleAuthenticateBtn}>{autenticationBtn}</button>
+      {
+        user
+          ? <div>
+            <h1>get Tuya</h1>
+            <button onClick={handleTuyaBtn}>get Tuya data</button>
+
+            <h3>Switcher</h3>
+            <ul>
+              {
+                tuyaDevices === null
+                  ? null
+                  : tuyaDevices.map((device: any) => (
+                    device.dev_type === "switch"
+                      ? <DeviceList key={device.id} device={device} />
+                      : null
+                  ))
+              }
+            </ul>
+
+            <h3>Scener</h3>
+            <ul>
+              {
+                tuyaDevices === null
+                  ? null
+                  : tuyaDevices.map((device: any) => (
+                    device.dev_type === "scene"
+                      ? <DeviceList key={device.id} device={device} />
+                      : null
+                  ))
+              }
+            </ul>
+          </div>
+          : null
+      }
     </div>
   );
 }
